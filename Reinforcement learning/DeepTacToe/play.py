@@ -12,7 +12,7 @@ player2=g.Player(board,2,beh='fixed')
 
 board.start_game()
 wins=[]
-n_ep=50000
+n_ep=10000
 
 for episode in range(n_ep):
 	board.clear()
@@ -23,16 +23,16 @@ for episode in range(n_ep):
 		player1.update_epsilon(episode)
 		board.update(action,1)	
 		if(board.get_condition()<4): break
-		player2.Q=player1.Q	
 		action=player2.move()
+		player1.update_Q(action)
 		board.update(action,2)		
 		if(board.get_condition()<4): break
 	if(episode%100==0):
-		wins.append(g.run_trial(player1,2))
+		wins.append(g.run_trial(player1,1))
 
-plt.plot(np.arange(0,n_ep,100),wins)
+pp(player1.Q)
+plt.plot(wins)
 plt.show()
-print(wins)
 
 
 

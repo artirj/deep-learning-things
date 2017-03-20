@@ -85,11 +85,21 @@ def test_player_bestmove():
 	player=g.Player(board,1)
 	board.set_state([2,1,2,1,2,1,2,0,2])
 	player.set_Q(7,10)
-	assert np.array_equal(player.eval_board(),[10])
+	assert np.array_equal(player.eval_board(),[  0.,   0.,   0.,   0.,   0.,   0.,   0.,  10.,   0.])
 	board.set_state([0,1,2,1,2,1,2,0,2])
 	player.set_Q(0,20)
 	player.set_Q(7,10)
-	assert np.array_equal(player.eval_board(),[20,10])
+	assert np.array_equal(player.eval_board(),[ 20.,   0.,   0.,   0.,   0.,   0.,   0.,  10.,   0.])
+
+def test_player_move():
+	board=g.Board()
+	player=g.Player(board,1)
+	board.set_state([1,0,1,0,2,0,0,0,0])
+	player.set_Q(1,10)
+	player.epsilon=0
+	assert player.move()==1
+
+
 	
 
 def test_state():

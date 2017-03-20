@@ -1,6 +1,7 @@
 import numpy as np
 from pprint import pprint as pp
 from collections import defaultdict
+import pickle
 def blank_state(flat=False):
 	"""Generate a 9x1 zero vector as blank state"""
 	if flat:
@@ -14,7 +15,7 @@ def run_trial(player1,n=5):
 	player.epsilon=0	
 	player2=Player(board,2,beh='random')
 	#player2=Player(board,2,beh='fixed')
-	win_1=0.
+	win_1=0
 	for episode in range(n):
 		board.clear()
 		for i in range(6):
@@ -136,7 +137,7 @@ class State(np.ndarray):
 
 class Player():
 
-	def __init__(self,board,n,beh='qlearn',alpha=0.5,gamma=1):
+	def __init__(self,board,n,beh='qlearn',alpha=0.4,gamma=0.9999):
 		self.n=n
 		self.Q=defaultdict(np.float32)
 		self.board=board
@@ -155,7 +156,7 @@ class Player():
 			self.other=1
 
 	def update_epsilon(self,episode):
-		self.epsilon=0.9*np.exp(-2e-4*episode)
+		self.epsilon=0.9*np.exp(-1e-5*episode)
 
 
 	def set_Q(self,action,val):
@@ -184,12 +185,16 @@ class Player():
 				val=self.reward(action,state='True')
 			return val
 		else:
-			return [self.get_Q(actions[i]) for i in range(actions.size)]		
-			
-		
-		
+			return_values=np.zeros((9,))
+			return_values[actions]=[self.get_Q(actions[i]) for i in range(actions.size)]
+			return return_values
 
-		
+	def allowed_q(self):
+		"""Returns the q-values of the allowed actions"""
+		actions=self.board.get_empty()
+		return_values=[self.get_Q(actions[i]) for i in range(actions.size)]
+		return return_values,actions
+
 
 
 	def move(self):
@@ -200,7 +205,8 @@ class Player():
 			if(move.size==0):
 				return None
 		else:
-			move=np.argmax(self.eval_board())
+			qvalues,allowed=self.allowed_q()
+			move=allowed[np.argmax(qvalues)]
 		#self.last_move=np.asscalar(move)
 		return np.asscalar(move)
 
@@ -208,9 +214,11 @@ class Player():
 	def get_Q(self,action,state=0):		
 		if(type(state)==int):
 			state=self.board.get_state()
+		if(type(state)==(np.ndarray or list) ):
+			state=State(state)
 		
 
-		return self.Q[(state.to_tuple(),action)]
+		return self.Q[(State(state).to_tuple(),action)]
 
 
 	def reward(self,action,state='False'):
@@ -232,6 +240,11 @@ class Player():
 			R=-1
 		
 		return R
+
+	def save_Q(self):
+		pickle.dump(self.Q,open("playerQ.p","wb"))
+	def load_Q(self):
+		self.Q=pickle.load(open("playerQ.p",'rb'))
 
 
 
