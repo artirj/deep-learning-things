@@ -8,14 +8,15 @@ def blank_state(flat=False):
 		return State(np.zeros((9,),dtype=np.int32))
 	return State(np.zeros((3, 3),dtype=np.int32))
 
-def softmax(array):
-	return np.exp(array-np.max(array))/(np.exp(array-np.max(array)).sum())
+def softmax(array,epsilon=1):
+	return np.exp((array-np.max(array))/epsilon)/((np.exp((array-np.max(array))/epsilon)).sum())
 
 def run_trial(player1,n=5):
 	board=Board()
 	player=Player(board,1)
 	player.Q=player1.Q
-	player.epsilon=0	
+	player.epsilon=1 if player1.move_type=='softmax' else 0
+	
 	player2=Player(board,2,beh='random')
 	#player2=Player(board,2,beh='fixed')
 	win_1=0
@@ -123,7 +124,7 @@ class Board():
 
 		def update(self,action,player):
 			if(type(action)!=None):
-				self.state.to_9()[action]=player
+				self.state.to_9()[int(action)]=player
 
 class State(np.ndarray):
 
@@ -140,26 +141,27 @@ class State(np.ndarray):
 
 class Player():
 
-	def __init__(self,board,n,beh='qlearn',alpha=0.6,gamma=0.9999):
+	def __init__(self,board,n,beh='qlearn',alpha=0.6,gamma=0.9999,move_type='softmax'):
 		self.n=n
 		self.Q=defaultdict(np.float32)
 		self.board=board
+		self.move_type=move_type
 		self.alpha=alpha
 		self.gamma=gamma
 		if(beh=='random'):
-			self.epsilon=1
-		if(beh=='fixed'):
-			self.epsilon=0.5
+			self.epsilon=1000
 		else:
-			self.epsilon=0.9
+			self.epsilon=100
+		
+
 		self.beh=beh
-		if(n==1):
-			self.other=2
-		else:
-			self.other=1
+		self.other=2 if n==1 else 1
 
 	def update_epsilon(self,episode):
-		self.epsilon=0.9*np.exp(-1e-5*episode)
+		if(self.move_type=='softmax'):
+			self.epsilon=100*np.exp(-1e-2*episode)+1
+		else:
+			self.epsilon=0.9*np.exp(-1e-5*episode)
 
 
 	def set_Q(self,action,val):
@@ -200,20 +202,20 @@ class Player():
 
 
 
-	def move(self,move_type='softmax'):
+	def move(self):
 		"""Makes a move using softmax"""
-		dice=np.random.uniform()
-		if(dice<self.epsilon):
-			move=np.random.permutation(self.board.get_empty())[:1]
-			if(move.size==0):
-				return None
-		else:
-			qvalues,allowed=self.allowed_q()
-			if(move_type=='max'):
-				move=allowed[np.argmax(qvalues)]
-			elif(move_type=='softmax'):
-				move=np.random.choice(allowed,p=softmax(qvalues))
+		qvalues,allowed=self.allowed_q()
+		if(self.move_type=='max'):
+			dice=np.random.uniform()
+			if(dice<self.epsilon):
+				move=np.random.permutation(self.board.get_empty())[:1]
+				if(move.size==0):
+					return None
 			else:
+				move=allowed[np.argmax(qvalues)]
+		elif(self.move_type=='softmax'):
+				move=np.random.choice(allowed,p=softmax(qvalues,self.epsilon))
+		else:
 				raise Exception("Invalid move_type! Available types are softmax and max")
 		
 		return np.asscalar(move)
@@ -245,7 +247,7 @@ class Player():
 		elif(n==self.other):
 			R=-1000
 		elif(n==3):
-			R=-1
+			R=-100
 		
 		return R
 
