@@ -9,6 +9,7 @@ board=g.Board()
 
 player1=g.Player(board,1)
 player2=g.Player(board,2,beh='fixed')
+player1.epsilon=1
 
 board.start_game()
 wins=[]
@@ -20,17 +21,17 @@ for episode in range(n_ep):
 
 		action=player1.move()		
 		player1.update_Q(action)
-		player1.update_epsilon(episode)
+		#player1.update_epsilon(episode)
 		board.update(action,1)	
 		if(board.get_condition()<4): break
 		action=player2.move()
-		player1.update_Q(action)
+		
 		board.update(action,2)		
 		if(board.get_condition()<4): break
 	if(episode%100==0):
 		wins.append(g.run_trial(player1,1))
 
-pp(player1.Q)
+
 plt.plot(wins)
 plt.show()
 

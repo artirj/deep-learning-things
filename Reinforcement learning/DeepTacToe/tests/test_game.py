@@ -107,3 +107,10 @@ def test_state():
 	assert np.array_equal(s,np.array([2,1,0,1,2,1,2,0,2]))
 	assert s.to_9().shape==(9,)
 	assert type(s.to_tuple())==tuple
+
+
+def test_softmax():
+	assert np.array_equal(g.softmax([1,1]),np.array([0.5,0.5]))
+	assert np.array_equal(g.softmax([1,1,1]),np.array([1/3,1/3,1/3]))
+
+

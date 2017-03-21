@@ -1,0 +1,56 @@
+import deeptactoe
+from deeptactoe import game as g
+from pprint import pprint as pp
+import numpy as np
+board=g.Board()
+player1=g.Player(board,1)
+player2=g.Player(board,2,beh='human')
+player1.epsilon=1
+
+#player1.load_Q()
+def sanitise(board,move):
+	if(move in board.get_empty()):
+		return False
+	else:
+		print("Illegal move!")
+		return True
+def resolution(board):
+	case=board.get_condition()
+	if(case==1):
+		print("The Computer wins")
+	elif(case==2):
+		print("Human wins")
+	else:
+		print("Tie")
+
+board.start_game()
+print('Player 1 (CPU) begins because that\'s how the code works\n')
+
+while 1:
+	okmove=True
+	print('Player 1 (CPU) moves\n')
+	action=player1.move()
+	board.update(action,1)
+	board.show()
+	if(board.get_condition()<4):
+		resolution(board)
+		break
+	print('Player 2 (Human) moves\n')
+	while(okmove):
+		while 1:
+			try:
+				human_move = input('Input your move: ')
+				break
+			except:
+				print("Invalid move")
+			
+		okmove=sanitise(board,human_move)
+		if(~okmove):
+			board.update(human_move,2)
+			board.show()
+		if(board.get_condition()<4):
+		 	resolution(board)
+			break
+
+
+
