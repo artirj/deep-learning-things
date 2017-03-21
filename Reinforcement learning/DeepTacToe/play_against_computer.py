@@ -6,8 +6,10 @@ board=g.Board()
 player1=g.Player(board,1)
 player2=g.Player(board,2,beh='human')
 player1.epsilon=1
-
-#player1.load_Q()
+try:
+	player1.load_Q()
+except:
+	print("Not possible to load Q matrix. Computer will play at random")
 def sanitise(board,move):
 	if(move in board.get_empty()):
 		return False
