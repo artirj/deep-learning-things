@@ -11,7 +11,7 @@ try:
 except:
 	print("Not possible to load Q matrix. Computer will play at random")
 def sanitise(board,move):
-	if(np.any(np.equal(board.get_empty(),move))):
+	if(np.any(np.equal(board.get_empty(),int(move)))):
 		return False
 	else:
 		print("Illegal move!")
@@ -33,6 +33,7 @@ while flag:
 	print('Player 1 (CPU) moves\n')
 	action=player1.move()
 	board.update(action,1)
+	player1.update_Q(action)
 	board.show()
 	if(board.get_condition()<4):
 		resolution(board)
@@ -47,10 +48,10 @@ while flag:
 				print("Invalid move")
 			
 		okmove=sanitise(board,human_move)
-		print(okmove)
-		if(~okmove):
+		if(not okmove):
 			board.update(human_move,2)
 			board.show()
 		if(board.get_condition()<4):
 			resolution(board)
 			flag=0
+player1.save_Q()

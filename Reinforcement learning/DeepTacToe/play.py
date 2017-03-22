@@ -21,7 +21,7 @@ for episode in range(n_ep):
 
 		action=player1.move()		
 		player1.update_Q(action)
-		#player1.update_epsilon(episode)
+		player1.update_epsilon(episode)
 		board.update(action,1)	
 		if(board.get_condition()<4): break
 		action=player2.move()

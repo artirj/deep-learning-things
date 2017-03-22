@@ -65,9 +65,9 @@ def test_player_rewards():
 	player=g.Player(board,1)
 	assert player.reward(3)==0
 	board.set_state([1,1,1,0,0,0,0,0,0])
-	assert player.reward(3)==1000
+	assert player.reward(3)==100
 	board.set_state([2,2,2,0,0,0,0,0,0])
-	assert player.reward(3)==-1000
+	assert player.reward(3)==-100
 
 def test_player_move():
 	board=g.Board()

@@ -2,15 +2,14 @@ import numpy as np
 from pprint import pprint as pp
 from collections import defaultdict
 import pickle
+
 def blank_state(flat=False):
 	"""Generate a 9x1 zero vector as blank state"""
 	if flat:
-		return State(np.zeros((9,),dtype=np.int32))
-	return State(np.zeros((3, 3),dtype=np.int32))
+		return State(np.zeros((4,),dtype=np.int32))
+	return State(np.zeros((2, 2),dtype=np.int32))
 
-def softmax(array,epsilon=1,beh='normal'):
-	if(beh=='copier'):
-		array=-np.array(array)
+def softmax(array,epsilon=1):
 	return np.exp((array-np.max(array))/epsilon)/((np.exp((array-np.max(array))/epsilon)).sum())
 
 def run_trial(player1,n=5):
@@ -24,18 +23,16 @@ def run_trial(player1,n=5):
 	win_1=0
 	for episode in range(n):
 		board.clear()
-		for i in range(6):
+		for i in range(5):
 			action=player.move()		
 			board.update(action,1)	
 			if(board.get_condition()==1): win_1+=1
-			if(board.get_condition()==3): win_1+=1
-			#if(board.get_condition()==2): win_1-=1
+			if(board.get_condition()==2): win_1-=1
 			if(board.get_condition()<4): break	
 			action=player2.move()
 			board.update(action,2)		
 			if(board.get_condition()==1): win_1+=1
-			if(board.get_condition()==3): win_1+=1
-			#if(board.get_condition()==2): win_1-=1
+			if(board.get_condition()==2): win_1-=1
 			if(board.get_condition()<4): break
 	return win_1/n
 
@@ -60,10 +57,10 @@ class Board():
 			
 			if(type(state)!=np.array):
 				state=State(np.array(state))
-			if(state.shape==(3,3)):
+			if(state.shape==(2,2)):
 					self.state=State(state)
-			elif(state.shape==(9,)):
-					self.state=State(state.reshape(3,3))
+			elif(state.shape==(4,)):
+					self.state=State(state.reshape(2,2))
 			else:
 				raise Exception("Wrong state format")			
 
@@ -74,7 +71,7 @@ class Board():
 			Returns:
 			Numpy array, 9x1"""
 			if flat:
-				return self.state.reshape(9,)
+				return self.state.reshape(4,)
 			return self.state
 
 
@@ -91,10 +88,10 @@ class Board():
 			array of possible states
 			"""
 			b=self.get_empty()
-			states=np.array(np.broadcast_to(self.state.to_9(),(len(b),9,)))
+			states=np.array(np.broadcast_to(self.state.to_9(),(len(b),4,)))
 			for i,pos in enumerate(b):
 		    		states[i][pos]=player
-			return State(states.reshape(len(b),3,3))
+			return State(states.reshape(len(b),2,2))
 
 
 
@@ -111,14 +108,14 @@ class Board():
 
 			if((state.diagonal()==1).all() or
 					(state[::-1].diagonal()==1).all() or
-					((state==1).sum(0)==3).any() or
-					((state==1).sum(1)==3).any()):
+					((state==1).sum(0)==2).any() or
+					((state==1).sum(1)==2).any()):
 					return 1
 
 			elif((state.diagonal()==2).all() or
 					(state[::-1].diagonal()==2).all() or
-					((state==2).sum(0)==3).any() or
-					((state==2).sum(1)==3).any()):
+					((state==2).sum(0)==2).any() or
+					((state==2).sum(1)==2).any()):
 					return 2
 			elif(len(self.get_empty())==0):
 					return 3
@@ -137,7 +134,7 @@ class State(np.ndarray):
 
 
 	def to_9(self):
-		return self.reshape(9,)
+		return self.reshape(4,)
 
 
 	def to_tuple(self):
@@ -145,31 +142,27 @@ class State(np.ndarray):
 
 class Player():
 
-	def __init__(self,board,n,beh='qlearn',alpha=0.1,gamma=0.999,move_type='softmax'):
+	def __init__(self,board,n,beh='qlearn',alpha=0.05,gamma=0.9999,move_type='softmax'):
 		self.n=n
 		self.Q=defaultdict(np.float32)
 		self.board=board
 		self.move_type=move_type
 		self.alpha=alpha
 		self.gamma=gamma
-		self.its=0
-		self.beh=beh
 		if(beh=='random'):
 			self.epsilon=1000
-		elif(beh=='copier'):
-			self.epsilon=1
 		else:
-			self.epsilon=100		
-
+			self.epsilon=100
 		
+
+		self.beh=beh
 		self.other=2 if n==1 else 1
 
 	def update_epsilon(self,episode):
 		if(self.move_type=='softmax'):
-			self.epsilon=100*np.exp(-1e-3*episode)+1
+			self.epsilon=100*np.exp(-1e-2*episode)+1
 		else:
 			self.epsilon=0.9*np.exp(-1e-5*episode)
-		self.its+=1
 
 
 	def set_Q(self,action,val):
@@ -190,9 +183,7 @@ class Player():
 	def eval_board(self,action=-1):
 		"""Returns the Q-values for the current allowed actions"""
 		actions=self.board.get_empty()
-		
-		if(action!=-1):
-			actions=np.setdiff1d(self.board.get_empty(),action)
+		if(action!=-1):	
 			pseudostate=State(self.board.get_state())
 			pseudostate.to_9()[action]=self.n
 			val=[self.get_Q(actions[i],pseudostate) for i in range(actions.size)]
@@ -200,8 +191,7 @@ class Player():
 				val=self.reward(action,state='True')
 			return val
 		else:
-			actions=self.board.get_empty()
-			return_values=np.zeros((9,))
+			return_values=np.zeros((4,))
 			return_values[actions]=[self.get_Q(actions[i]) for i in range(actions.size)]
 			return return_values
 
@@ -214,7 +204,7 @@ class Player():
 
 
 	def move(self):
-		"""Makes a move using softmax or max"""
+		"""Makes a move using softmax"""
 		qvalues,allowed=self.allowed_q()
 		if(self.move_type=='max'):
 			dice=np.random.uniform()
@@ -223,12 +213,9 @@ class Player():
 				if(move.size==0):
 					return None
 			else:
-				if(self.beh=='copier'):
-					move=allowed[np.argmin(qvalues)]
-				else:
-					move=allowed[np.argmax(qvalues)]
+				move=allowed[np.argmax(qvalues)]
 		elif(self.move_type=='softmax'):
-				move=np.random.choice(allowed,p=softmax(qvalues,self.epsilon,self.beh))
+				move=np.random.choice(allowed,p=softmax(qvalues,self.epsilon))
 		else:
 				raise Exception("Invalid move_type! Available types are softmax and max")
 		
@@ -257,18 +244,18 @@ class Player():
 		if(n==4):
 			R=0
 		elif(n==self.n):
-			R=100
+			R=10
 		elif(n==self.other):
-			R=-100
-		elif(n==3):
 			R=-10
+		elif(n==3):
+			R=-1
 		
 		return R
 
 	def save_Q(self):
-		pickle.dump((self.Q,self.its),open("playerQ.p","wb"))
+		pickle.dump(self.Q,open("playerQ.p","wb"))
 	def load_Q(self):
-		self.Q,self.its=pickle.load(open("playerQ.p",'rb'))
+		self.Q=pickle.load(open("playerQ.p",'rb'))
 
 
 
